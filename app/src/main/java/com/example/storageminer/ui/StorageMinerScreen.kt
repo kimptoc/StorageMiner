@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,7 +41,10 @@ import com.example.storageminer.viewmodel.StorageMinerViewModel
 fun StorageMinerScreen(
     viewModel: StorageMinerViewModel,
     hasPermission: Boolean,
+    hasUsageStatsPermission: Boolean,
     onRequestPermission: () -> Unit,
+    onRequestUsageStats: () -> Unit,
+    onOpenInFiles: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scanState by viewModel.scanState.collectAsState()
@@ -98,8 +102,11 @@ fun StorageMinerScreen(
                 val state = scanState as ScanState.Completed
                 ResultsView(
                     result = state.result,
+                    hasUsageStatsPermission = hasUsageStatsPermission,
                     onScanAgain = { viewModel.reset() },
                     onDrillDown = { viewModel.drillDown(it) },
+                    onRequestUsageStats = onRequestUsageStats,
+                    onOpenInFiles = onOpenInFiles,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -168,10 +175,18 @@ private fun IdleView(
 @Composable
 private fun ResultsView(
     result: StorageScanResult,
+    hasUsageStatsPermission: Boolean,
     onScanAgain: () -> Unit,
     onDrillDown: (com.example.storageminer.model.StorageItem) -> Unit,
+    onRequestUsageStats: () -> Unit,
+    onOpenInFiles: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val externalRoot = Environment.getExternalStorageDirectory().absolutePath
+    val isRootLevel = result.scannedPath == externalRoot
+    val isAppsView = result.scannedPath == StorageMinerViewModel.APPS_PATH
+    val showOpenInFiles = !isAppsView && result.scannedPath.startsWith(externalRoot)
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -213,6 +228,19 @@ private fun ResultsView(
             )
         }
 
+        // Usage stats permission prompt at root level
+        if (isRootLevel && !hasUsageStatsPermission) {
+            TextButton(
+                onClick = onRequestUsageStats,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Text(
+                    text = "Grant usage access to see app storage sizes",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (result.items.isNotEmpty()) {
@@ -238,16 +266,27 @@ private fun ResultsView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedButton(
-            onClick = onScanAgain,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Scan Again")
+            OutlinedButton(onClick = onScanAgain) {
+                Text("Scan Again")
+            }
+
+            if (showOpenInFiles) {
+                Spacer(modifier = Modifier.width(12.dp))
+                OutlinedButton(onClick = { onOpenInFiles(result.scannedPath) }) {
+                    Text("Open in Files")
+                }
+            }
         }
     }
 }
 
 private fun buildBreadcrumb(scannedPath: String): String {
+    if (scannedPath == StorageMinerViewModel.APPS_PATH) return "Storage > Apps"
     val externalRoot = Environment.getExternalStorageDirectory().absolutePath
     if (scannedPath == externalRoot) return "Storage"
     val relative = scannedPath.removePrefix("$externalRoot/")
