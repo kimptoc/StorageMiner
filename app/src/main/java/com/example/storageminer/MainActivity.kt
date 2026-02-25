@@ -49,7 +49,8 @@ class MainActivity : ComponentActivity() {
                     hasUsageStatsPermission = hasUsageStatsPermission,
                     onRequestPermission = { requestStoragePermission() },
                     onRequestUsageStats = { requestUsageStatsPermission() },
-                    onOpenInFiles = { path -> openInFileManager(path) }
+                    onOpenInFiles = { path -> openInFileManager(path) },
+                    onOpenAppSettings = { pkg -> openAppSettings(pkg) }
                 )
             }
         }
@@ -76,6 +77,18 @@ class MainActivity : ComponentActivity() {
     private fun requestUsageStatsPermission() {
         val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         startActivity(intent)
+    }
+
+    private fun openAppSettings(packageName: String) {
+        try {
+            val intent = Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+        } catch (_: Exception) {
+            // Package not found or settings not available
+        }
     }
 
     private fun openInFileManager(path: String) {

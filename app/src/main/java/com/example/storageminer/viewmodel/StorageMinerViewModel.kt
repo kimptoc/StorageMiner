@@ -4,9 +4,11 @@ import android.app.Application
 import android.app.AppOpsManager
 import android.app.usage.StorageStatsManager
 import android.content.pm.PackageManager
+import android.os.Bundle
 import android.os.Environment
 import android.os.Process
 import android.os.storage.StorageManager
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.storageminer.model.ScanState
@@ -25,6 +27,7 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
     companion object {
         const val APPS_PATH = "__apps__"
         const val OTHER_APPS_PATH = "__other_apps__"
+        const val APP_SETTINGS_PREFIX = "__app_settings__:"
     }
 
     private val _scanState = MutableStateFlow<ScanState>(ScanState.Idle)
@@ -80,26 +83,62 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
                 progressJob.cancel()
 
                 val (totalStorage, freeStorage) = getDeviceStorage()
-                var totalScanned = items.sumOf { it.sizeBytes }
+                val filesScanned = items.sumOf { it.sizeBytes }
+                var totalScanned = filesScanned
 
                 val topItems = groupSmallItems(items).toMutableList()
 
-                // At root level, inject "Apps (installed)" if we have usage stats permission
-                if (isRootScan && hasUsageStatsPermission()) {
-                    val appItems = getAppStorageStats()
-                    val appsTotal = appItems.sumOf { it.sizeBytes }
-                    if (appsTotal > 0) {
+                // At root level, inject extra categories
+                if (isRootScan) {
+                    var appsTotal = 0L
+                    var trashTotal = 0L
+
+                    if (hasUsageStatsPermission()) {
+                        val appItems = getAppStorageStats()
+                        appsTotal = appItems.sumOf { it.sizeBytes }
+                        if (appsTotal > 0) {
+                            topItems.add(
+                                StorageItem(
+                                    name = "Apps (installed)",
+                                    sizeBytes = appsTotal,
+                                    isDirectory = true,
+                                    path = APPS_PATH
+                                )
+                            )
+                            totalScanned += appsTotal
+                        }
+                    }
+
+                    // Trash
+                    trashTotal = getTrashedFilesSize()
+                    if (trashTotal > 0) {
                         topItems.add(
                             StorageItem(
-                                name = "Apps (installed)",
-                                sizeBytes = appsTotal,
-                                isDirectory = true,
-                                path = APPS_PATH
+                                name = "Trash",
+                                sizeBytes = trashTotal,
+                                isDirectory = false,
+                                path = ""
                             )
                         )
-                        topItems.sortByDescending { it.sizeBytes }
-                        totalScanned += appsTotal
+                        totalScanned += trashTotal
                     }
+
+                    // System & other (residual)
+                    val usedStorage = totalStorage - freeStorage
+                    val systemOther = usedStorage - totalScanned
+                    if (systemOther > 0) {
+                        topItems.add(
+                            StorageItem(
+                                name = "System & other",
+                                sizeBytes = systemOther,
+                                isDirectory = false,
+                                path = ""
+                            )
+                        )
+                        totalScanned += systemOther
+                    }
+
+                    topItems.sortByDescending { it.sizeBytes }
                 }
 
                 val result = StorageScanResult(
@@ -147,7 +186,7 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
 
         val currentPath = getCurrentScannedPath() ?: return
 
-        // Handle Apps drilldown — show per-app breakdown directly
+        // Handle Apps drilldown
         if (item.path == APPS_PATH) {
             pathStack.addLast(currentPath)
             canNavigateUp.value = true
@@ -155,7 +194,7 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
             return
         }
 
-        // Handle "Other apps" drilldown — show all the small apps
+        // Handle "Other apps" drilldown
         if (item.path == OTHER_APPS_PATH) {
             pathStack.addLast(currentPath)
             canNavigateUp.value = true
@@ -241,7 +280,7 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
                         name = label,
                         sizeBytes = totalBytes,
                         isDirectory = false,
-                        path = ""
+                        path = APP_SETTINGS_PREFIX + appInfo.packageName
                     )
                 )
             } catch (_: Exception) {
@@ -250,6 +289,49 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
         }
 
         return items.sortedByDescending { it.sizeBytes }
+    }
+
+    private fun getTrashedFilesSize(): Long {
+        return try {
+            val app = getApplication<Application>()
+            var totalTrash = 0L
+
+            val collections = listOf(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            )
+
+            for (uri in collections) {
+                val queryArgs = Bundle().apply {
+                    putInt(
+                        MediaStore.QUERY_ARG_MATCH_TRASHED,
+                        MediaStore.MATCH_ONLY
+                    )
+                    putStringArray(
+                        "android:query-arg-sql-selection",
+                        arrayOf()
+                    )
+                }
+
+                app.contentResolver.query(
+                    uri,
+                    arrayOf(MediaStore.MediaColumns.SIZE),
+                    queryArgs,
+                    null
+                )?.use { cursor ->
+                    val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
+                    while (cursor.moveToNext()) {
+                        totalTrash += cursor.getLong(sizeCol)
+                    }
+                }
+            }
+
+            totalTrash
+        } catch (_: Exception) {
+            0L
+        }
     }
 
     private fun groupSmallApps(items: List<StorageItem>): List<StorageItem> {

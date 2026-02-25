@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.storageminer.model.ScanState
+import com.example.storageminer.model.StorageItem
 import com.example.storageminer.model.StorageScanResult
 import com.example.storageminer.ui.components.PieChart
 import com.example.storageminer.ui.components.ScanningIndicator
@@ -45,6 +46,7 @@ fun StorageMinerScreen(
     onRequestPermission: () -> Unit,
     onRequestUsageStats: () -> Unit,
     onOpenInFiles: (String) -> Unit,
+    onOpenAppSettings: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scanState by viewModel.scanState.collectAsState()
@@ -104,7 +106,17 @@ fun StorageMinerScreen(
                     result = state.result,
                     hasUsageStatsPermission = hasUsageStatsPermission,
                     onScanAgain = { viewModel.reset() },
-                    onDrillDown = { viewModel.drillDown(it) },
+                    onItemClick = { item ->
+                        // If it's an app item with package name, open app settings
+                        if (item.path.startsWith(StorageMinerViewModel.APP_SETTINGS_PREFIX)) {
+                            val packageName = item.path.removePrefix(
+                                StorageMinerViewModel.APP_SETTINGS_PREFIX
+                            )
+                            onOpenAppSettings(packageName)
+                        } else {
+                            viewModel.drillDown(item)
+                        }
+                    },
                     onRequestUsageStats = onRequestUsageStats,
                     onOpenInFiles = onOpenInFiles,
                     modifier = Modifier.padding(innerPadding)
@@ -177,7 +189,7 @@ private fun ResultsView(
     result: StorageScanResult,
     hasUsageStatsPermission: Boolean,
     onScanAgain: () -> Unit,
-    onDrillDown: (com.example.storageminer.model.StorageItem) -> Unit,
+    onItemClick: (StorageItem) -> Unit,
     onRequestUsageStats: () -> Unit,
     onOpenInFiles: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -217,11 +229,13 @@ private fun ResultsView(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            Text(
-                text = "Visible to scan: ${formatFileSize(result.totalScanned)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (!isRootLevel) {
+                Text(
+                    text = "This level: ${formatFileSize(result.totalScanned)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         } else {
             Text(
                 text = "Scanned: ${formatFileSize(result.totalScanned)}",
@@ -247,7 +261,7 @@ private fun ResultsView(
         if (result.items.isNotEmpty()) {
             PieChart(
                 items = result.items,
-                onItemClick = onDrillDown,
+                onItemClick = onItemClick,
                 modifier = Modifier.weight(1f)
             )
         } else {

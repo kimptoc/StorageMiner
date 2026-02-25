@@ -4,57 +4,36 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Pie chart centered at (54, 54) with radius 28 -->
-    <!-- Slice 1: Blue 30% (0° to 108°) -->
+    <!-- Pie chart silhouette centered at (54, 54) radius 28 -->
     <path
-        android:fillColor="#4285F4"
-        android:pathData="M54,54 L54,26 A28,28 0 0,1 80.63,62.65 Z" />
-
-    <!-- Slice 2: Red 25% (108° to 198°) -->
-    <path
-        android:fillColor="#EA4335"
-        android:pathData="M54,54 L80.63,62.65 A28,28 0 0,1 45.35,80.63 Z" />
-
-    <!-- Slice 3: Yellow 20% (198° to 270°) -->
-    <path
-        android:fillColor="#FBBC04"
-        android:pathData="M54,54 L45.35,80.63 A28,28 0 0,1 26,54 Z" />
-
-    <!-- Slice 4: Green 17% (270° to 331.2°) -->
-    <path
-        android:fillColor="#34A853"
-        android:pathData="M54,54 L26,54 A28,28 0 0,1 40.51,29.46 Z" />
-
-    <!-- Slice 5: Orange 8% (331.2° to 360°) -->
-    <path
-        android:fillColor="#FF6D01"
-        android:pathData="M54,54 L40.51,29.46 A28,28 0 0,1 54,26 Z" />
+        android:fillColor="#000000"
+        android:pathData="M54,54 m-28,0 a28,28 0 1,1 56,0 a28,28 0 1,1 -56,0" />
 
     <!-- White separator lines -->
     <path
         android:fillColor="#00000000"
         android:pathData="M54,54 L54,26"
-        android:strokeWidth="1"
+        android:strokeWidth="1.5"
         android:strokeColor="#FFFFFF" />
     <path
         android:fillColor="#00000000"
         android:pathData="M54,54 L80.63,62.65"
-        android:strokeWidth="1"
+        android:strokeWidth="1.5"
         android:strokeColor="#FFFFFF" />
     <path
         android:fillColor="#00000000"
         android:pathData="M54,54 L45.35,80.63"
-        android:strokeWidth="1"
+        android:strokeWidth="1.5"
         android:strokeColor="#FFFFFF" />
     <path
         android:fillColor="#00000000"
         android:pathData="M54,54 L26,54"
-        android:strokeWidth="1"
+        android:strokeWidth="1.5"
         android:strokeColor="#FFFFFF" />
     <path
         android:fillColor="#00000000"
         android:pathData="M54,54 L40.51,29.46"
-        android:strokeWidth="1"
+        android:strokeWidth="1.5"
         android:strokeColor="#FFFFFF" />
 
     <!-- Small white center dot -->
