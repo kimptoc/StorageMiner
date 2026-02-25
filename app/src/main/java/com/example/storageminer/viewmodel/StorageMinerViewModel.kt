@@ -3,7 +3,6 @@ package com.example.storageminer.viewmodel
 import android.app.Application
 import android.app.AppOpsManager
 import android.app.usage.StorageStatsManager
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Environment
 import android.os.Process
@@ -25,12 +24,14 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
 
     companion object {
         const val APPS_PATH = "__apps__"
+        const val OTHER_APPS_PATH = "__other_apps__"
     }
 
     private val _scanState = MutableStateFlow<ScanState>(ScanState.Idle)
     val scanState = _scanState.asStateFlow()
 
     private val pathStack = ArrayDeque<String>()
+    private val resultCache = mutableMapOf<String, StorageScanResult>()
 
     val canNavigateUp = MutableStateFlow(false)
 
@@ -79,7 +80,7 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
                 progressJob.cancel()
 
                 val (totalStorage, freeStorage) = getDeviceStorage()
-                val totalScanned = items.sumOf { it.sizeBytes }
+                var totalScanned = items.sumOf { it.sizeBytes }
 
                 val topItems = groupSmallItems(items).toMutableList()
 
@@ -97,19 +98,20 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
                             )
                         )
                         topItems.sortByDescending { it.sizeBytes }
+                        totalScanned += appsTotal
                     }
                 }
 
-                _scanState.value = ScanState.Completed(
-                    StorageScanResult(
-                        items = topItems,
-                        totalScanned = totalScanned,
-                        totalDeviceStorage = totalStorage,
-                        freeDeviceStorage = freeStorage,
-                        wasCancelled = false,
-                        scannedPath = path
-                    )
+                val result = StorageScanResult(
+                    items = topItems,
+                    totalScanned = totalScanned,
+                    totalDeviceStorage = totalStorage,
+                    freeDeviceStorage = freeStorage,
+                    wasCancelled = false,
+                    scannedPath = path
                 )
+                resultCache[path] = result
+                _scanState.value = ScanState.Completed(result)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 progressJob.cancel()
                 val totalScanned = scanner.bytesScanned.value
@@ -135,6 +137,7 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
     fun reset() {
         scanJob?.cancel()
         pathStack.clear()
+        resultCache.clear()
         canNavigateUp.value = false
         _scanState.value = ScanState.Idle
     }
@@ -148,21 +151,15 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
         if (item.path == APPS_PATH) {
             pathStack.addLast(currentPath)
             canNavigateUp.value = true
+            showAppsBreakdown(fullList = false)
+            return
+        }
 
-            val appItems = getAppStorageStats()
-            val grouped = groupSmallItems(appItems, label = "Other apps")
-            val (totalStorage, freeStorage) = getDeviceStorage()
-
-            _scanState.value = ScanState.Completed(
-                StorageScanResult(
-                    items = grouped,
-                    totalScanned = appItems.sumOf { it.sizeBytes },
-                    totalDeviceStorage = totalStorage,
-                    freeDeviceStorage = freeStorage,
-                    wasCancelled = false,
-                    scannedPath = APPS_PATH
-                )
-            )
+        // Handle "Other apps" drilldown — show all the small apps
+        if (item.path == OTHER_APPS_PATH) {
+            pathStack.addLast(currentPath)
+            canNavigateUp.value = true
+            showAppsBreakdown(fullList = true)
             return
         }
 
@@ -175,7 +172,39 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
         if (pathStack.isEmpty()) return
         val parentPath = pathStack.removeLast()
         canNavigateUp.value = pathStack.isNotEmpty()
+
+        // Try to restore from cache instead of re-scanning
+        val cached = resultCache[parentPath]
+        if (cached != null) {
+            _scanState.value = ScanState.Completed(cached)
+            return
+        }
+
         startScan(parentPath)
+    }
+
+    private fun showAppsBreakdown(fullList: Boolean) {
+        val allApps = getAppStorageStats()
+        val (totalStorage, freeStorage) = getDeviceStorage()
+        val appsTotal = allApps.sumOf { it.sizeBytes }
+
+        val displayItems = if (fullList) {
+            allApps
+        } else {
+            groupSmallApps(allApps)
+        }
+
+        val scannedPath = if (fullList) OTHER_APPS_PATH else APPS_PATH
+        val result = StorageScanResult(
+            items = displayItems,
+            totalScanned = appsTotal,
+            totalDeviceStorage = totalStorage,
+            freeDeviceStorage = freeStorage,
+            wasCancelled = false,
+            scannedPath = scannedPath
+        )
+        resultCache[scannedPath] = result
+        _scanState.value = ScanState.Completed(result)
     }
 
     private fun getCurrentScannedPath(): String? {
@@ -221,6 +250,25 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
         }
 
         return items.sortedByDescending { it.sizeBytes }
+    }
+
+    private fun groupSmallApps(items: List<StorageItem>): List<StorageItem> {
+        if (items.size <= 10) return items
+        val total = items.sumOf { it.sizeBytes }.coerceAtLeast(1)
+        val threshold = total * 0.02
+        val big = items.filter { it.sizeBytes >= threshold }
+        val small = items.filter { it.sizeBytes < threshold }
+        val smallSum = small.sumOf { it.sizeBytes }
+        return if (smallSum > 0) {
+            big + StorageItem(
+                name = "Other apps (${small.size})",
+                sizeBytes = smallSum,
+                isDirectory = true,
+                path = OTHER_APPS_PATH
+            )
+        } else {
+            big
+        }
     }
 
     private fun groupSmallItems(

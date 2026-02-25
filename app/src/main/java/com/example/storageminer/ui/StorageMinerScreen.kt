@@ -184,7 +184,8 @@ private fun ResultsView(
 ) {
     val externalRoot = Environment.getExternalStorageDirectory().absolutePath
     val isRootLevel = result.scannedPath == externalRoot
-    val isAppsView = result.scannedPath == StorageMinerViewModel.APPS_PATH
+    val isAppsView = result.scannedPath == StorageMinerViewModel.APPS_PATH ||
+        result.scannedPath == StorageMinerViewModel.OTHER_APPS_PATH
     val showOpenInFiles = !isAppsView && result.scannedPath.startsWith(externalRoot)
 
     Column(
@@ -287,6 +288,7 @@ private fun ResultsView(
 
 private fun buildBreadcrumb(scannedPath: String): String {
     if (scannedPath == StorageMinerViewModel.APPS_PATH) return "Storage > Apps"
+    if (scannedPath == StorageMinerViewModel.OTHER_APPS_PATH) return "Storage > Apps > Other"
     val externalRoot = Environment.getExternalStorageDirectory().absolutePath
     if (scannedPath == externalRoot) return "Storage"
     val relative = scannedPath.removePrefix("$externalRoot/")
