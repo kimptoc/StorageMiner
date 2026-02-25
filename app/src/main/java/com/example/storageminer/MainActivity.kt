@@ -50,7 +50,8 @@ class MainActivity : ComponentActivity() {
                     onRequestPermission = { requestStoragePermission() },
                     onRequestUsageStats = { requestUsageStatsPermission() },
                     onOpenInFiles = { path -> openInFileManager(path) },
-                    onOpenAppSettings = { pkg -> openAppSettings(pkg) }
+                    onOpenAppSettings = { pkg -> openAppSettings(pkg) },
+                    onOpenApp = { pkg -> openApp(pkg) }
                 )
             }
         }
@@ -77,6 +78,17 @@ class MainActivity : ComponentActivity() {
     private fun requestUsageStatsPermission() {
         val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         startActivity(intent)
+    }
+
+    private fun openApp(packageName: String) {
+        try {
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                startActivity(intent)
+            }
+        } catch (_: Exception) {
+            // App not launchable
+        }
     }
 
     private fun openAppSettings(packageName: String) {

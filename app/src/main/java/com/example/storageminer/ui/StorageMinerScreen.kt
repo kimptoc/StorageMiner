@@ -22,9 +22,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,10 +51,39 @@ fun StorageMinerScreen(
     onRequestUsageStats: () -> Unit,
     onOpenInFiles: (String) -> Unit,
     onOpenAppSettings: (String) -> Unit,
+    onOpenApp: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scanState by viewModel.scanState.collectAsState()
     val canGoUp by viewModel.canNavigateUp.collectAsState()
+
+    // State for app action dialog
+    var selectedAppPackage by remember { mutableStateOf<String?>(null) }
+    var selectedAppName by remember { mutableStateOf("") }
+
+    if (selectedAppPackage != null) {
+        AlertDialog(
+            onDismissRequest = { selectedAppPackage = null },
+            title = { Text(selectedAppName) },
+            text = null,
+            confirmButton = {
+                TextButton(onClick = {
+                    onOpenApp(selectedAppPackage!!)
+                    selectedAppPackage = null
+                }) {
+                    Text("Open App")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    onOpenAppSettings(selectedAppPackage!!)
+                    selectedAppPackage = null
+                }) {
+                    Text("App Settings")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -107,12 +140,11 @@ fun StorageMinerScreen(
                     hasUsageStatsPermission = hasUsageStatsPermission,
                     onScanAgain = { viewModel.reset() },
                     onItemClick = { item ->
-                        // If it's an app item with package name, open app settings
                         if (item.path.startsWith(StorageMinerViewModel.APP_SETTINGS_PREFIX)) {
-                            val packageName = item.path.removePrefix(
+                            selectedAppPackage = item.path.removePrefix(
                                 StorageMinerViewModel.APP_SETTINGS_PREFIX
                             )
-                            onOpenAppSettings(packageName)
+                            selectedAppName = item.name
                         } else {
                             viewModel.drillDown(item)
                         }
