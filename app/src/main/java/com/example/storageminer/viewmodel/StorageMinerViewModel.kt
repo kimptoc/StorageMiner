@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Environment
 import android.os.Process
+import android.os.StatFs
 import android.os.storage.StorageManager
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
@@ -21,12 +22,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.io.File
 
 class StorageMinerViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val APPS_PATH = "__apps__"
         const val OTHER_APPS_PATH = "__other_apps__"
+        const val SYSTEM_PATH = "__system__"
         const val APP_SETTINGS_PREFIX = "__app_settings__:"
     }
 
@@ -39,6 +42,9 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
     val canNavigateUp = MutableStateFlow(false)
 
     private var scanJob: Job? = null
+
+    // Store the residual so we can break it down when drilled into
+    private var lastSystemOtherBytes = 0L
 
     private val defaultRoot: String
         get() = Environment.getExternalStorageDirectory().absolutePath
@@ -127,12 +133,13 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
                     val usedStorage = totalStorage - freeStorage
                     val systemOther = usedStorage - totalScanned
                     if (systemOther > 0) {
+                        lastSystemOtherBytes = systemOther
                         topItems.add(
                             StorageItem(
                                 name = "System & other",
                                 sizeBytes = systemOther,
-                                isDirectory = false,
-                                path = ""
+                                isDirectory = true,
+                                path = SYSTEM_PATH
                             )
                         )
                         totalScanned += systemOther
@@ -202,6 +209,14 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
             return
         }
 
+        // Handle "System & other" drilldown
+        if (item.path == SYSTEM_PATH) {
+            pathStack.addLast(currentPath)
+            canNavigateUp.value = true
+            showSystemBreakdown()
+            return
+        }
+
         pathStack.addLast(currentPath)
         canNavigateUp.value = true
         startScan(item.path)
@@ -244,6 +259,113 @@ class StorageMinerViewModel(application: Application) : AndroidViewModel(applica
         )
         resultCache[scannedPath] = result
         _scanState.value = ScanState.Completed(result)
+    }
+
+    private fun showSystemBreakdown() {
+        val (totalStorage, freeStorage) = getDeviceStorage()
+        val items = mutableListOf<StorageItem>()
+
+        // Try to estimate OS partition size from raw device capacity
+        val rawCapacity = getRawDeviceCapacity()
+        val usableCapacity = totalStorage
+        if (rawCapacity > usableCapacity) {
+            val osPartitions = rawCapacity - usableCapacity
+            items.add(
+                StorageItem(
+                    name = "OS & firmware (estimated)",
+                    sizeBytes = osPartitions,
+                    isDirectory = false,
+                    path = ""
+                )
+            )
+        }
+
+        // Dalvik cache / runtime estimate via /data partition overhead
+        val dataPartitionOverhead = getDataPartitionOverhead()
+        if (dataPartitionOverhead > 0) {
+            items.add(
+                StorageItem(
+                    name = "Filesystem overhead (estimated)",
+                    sizeBytes = dataPartitionOverhead,
+                    isDirectory = false,
+                    path = ""
+                )
+            )
+        }
+
+        // Whatever remains unaccounted
+        val estimated = items.sumOf { it.sizeBytes }
+        val remainder = lastSystemOtherBytes - estimated
+        if (remainder > 0) {
+            items.add(
+                StorageItem(
+                    name = "Caches, logs & system data",
+                    sizeBytes = remainder,
+                    isDirectory = false,
+                    path = ""
+                )
+            )
+        }
+
+        // If we couldn't estimate anything, show the total as one item
+        if (items.isEmpty()) {
+            items.add(
+                StorageItem(
+                    name = "System (inaccessible to apps)",
+                    sizeBytes = lastSystemOtherBytes,
+                    isDirectory = false,
+                    path = ""
+                )
+            )
+        }
+
+        val result = StorageScanResult(
+            items = items,
+            totalScanned = lastSystemOtherBytes,
+            totalDeviceStorage = totalStorage,
+            freeDeviceStorage = freeStorage,
+            wasCancelled = false,
+            scannedPath = SYSTEM_PATH
+        )
+        resultCache[SYSTEM_PATH] = result
+        _scanState.value = ScanState.Completed(result)
+    }
+
+    private fun getRawDeviceCapacity(): Long {
+        // Read /proc/partitions to find the main block device (largest one)
+        return try {
+            val lines = File("/proc/partitions").readLines()
+            var maxBlocks = 0L
+            for (line in lines) {
+                val parts = line.trim().split("\\s+".toRegex())
+                if (parts.size >= 4) {
+                    val blocks = parts[2].toLongOrNull() ?: continue
+                    if (blocks > maxBlocks) {
+                        maxBlocks = blocks
+                    }
+                }
+            }
+            // /proc/partitions reports in 1KB blocks
+            maxBlocks * 1024
+        } catch (_: Exception) {
+            0L
+        }
+    }
+
+    private fun getDataPartitionOverhead(): Long {
+        // Compare StatFs reported total vs what StorageStatsManager reports
+        // The difference is filesystem metadata, reserved blocks, journals
+        return try {
+            val statFs = StatFs(Environment.getDataDirectory().absolutePath)
+            val partitionTotal = statFs.totalBytes
+            val statsManager = getApplication<Application>()
+                .getSystemService(StorageStatsManager::class.java)
+            val usableTotal = statsManager.getTotalBytes(StorageManager.UUID_DEFAULT)
+            val overhead = partitionTotal - usableTotal
+            if (overhead > 0) overhead else 0L
+        } catch (_: Exception) {
+            0L
+        }
     }
 
     private fun getCurrentScannedPath(): String? {

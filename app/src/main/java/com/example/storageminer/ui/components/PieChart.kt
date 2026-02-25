@@ -80,13 +80,13 @@ fun PieChart(
                 .verticalScroll(rememberScrollState())
         ) {
             items.forEachIndexed { index, item ->
-                val isDrillable = item.isDirectory && item.path.isNotEmpty()
+                val isClickable = item.path.isNotEmpty()
                 LegendItem(
                     color = PieColors[index % PieColors.size],
                     item = item,
                     total = total,
-                    isDrillable = isDrillable,
-                    onClick = if (isDrillable && onItemClick != null) {
+                    isDrillable = isClickable,
+                    onClick = if (isClickable && onItemClick != null) {
                         { onItemClick(item) }
                     } else null
                 )

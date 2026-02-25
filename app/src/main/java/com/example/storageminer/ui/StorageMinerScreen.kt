@@ -198,7 +198,8 @@ private fun ResultsView(
     val isRootLevel = result.scannedPath == externalRoot
     val isAppsView = result.scannedPath == StorageMinerViewModel.APPS_PATH ||
         result.scannedPath == StorageMinerViewModel.OTHER_APPS_PATH
-    val showOpenInFiles = !isAppsView && result.scannedPath.startsWith(externalRoot)
+    val isSystemView = result.scannedPath == StorageMinerViewModel.SYSTEM_PATH
+    val showOpenInFiles = !isAppsView && !isSystemView && result.scannedPath.startsWith(externalRoot)
 
     Column(
         modifier = modifier
@@ -240,6 +241,16 @@ private fun ResultsView(
             Text(
                 text = "Scanned: ${formatFileSize(result.totalScanned)}",
                 style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        // Info note for system breakdown
+        if (isSystemView) {
+            Text(
+                text = "Estimates based on device partitions. Third-party apps cannot directly measure system storage.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
             )
         }
 
@@ -303,6 +314,7 @@ private fun ResultsView(
 private fun buildBreadcrumb(scannedPath: String): String {
     if (scannedPath == StorageMinerViewModel.APPS_PATH) return "Storage > Apps"
     if (scannedPath == StorageMinerViewModel.OTHER_APPS_PATH) return "Storage > Apps > Other"
+    if (scannedPath == StorageMinerViewModel.SYSTEM_PATH) return "Storage > System"
     val externalRoot = Environment.getExternalStorageDirectory().absolutePath
     if (scannedPath == externalRoot) return "Storage"
     val relative = scannedPath.removePrefix("$externalRoot/")
