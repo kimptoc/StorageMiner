@@ -1,4 +1,4 @@
-package com.example.storageminer.model
+package com.kimptoc.storageminer.model
 
 data class StorageItem(
     val name: String,

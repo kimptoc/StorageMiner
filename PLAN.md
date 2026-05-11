@@ -4,7 +4,7 @@
 
 Build an Android app that visualizes device storage usage. On launch, the app scans external storage, traversing directories to total file sizes, then displays results as a pie chart. The scan can be slow, so the UI shows progress (current folder, animation) and a stop button.
 
-The project already exists as a fresh Android Studio template with Jetpack Compose + Material 3, minSdk 33, targetSdk 36, package `com.example.storageminer`.
+The project already exists as a fresh Android Studio template with Jetpack Compose + Material 3, minSdk 33, targetSdk 36, package `com.kimptoc.storageminer`.
 
 ## Architecture
 

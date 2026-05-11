@@ -1,4 +1,4 @@
-package com.example.storageminer.ui.components
+package com.kimptoc.storageminer.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -29,9 +29,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.example.storageminer.model.StorageItem
-import com.example.storageminer.ui.theme.PieColors
-import com.example.storageminer.util.formatFileSize
+import com.kimptoc.storageminer.model.StorageItem
+import com.kimptoc.storageminer.ui.theme.PieColors
+import com.kimptoc.storageminer.util.formatFileSize
 
 @Composable
 fun PieChart(

@@ -1,4 +1,4 @@
-package com.example.storageminer.ui.theme
+package com.kimptoc.storageminer.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

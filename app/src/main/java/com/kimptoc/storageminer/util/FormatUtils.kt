@@ -1,4 +1,4 @@
-package com.example.storageminer.util
+package com.kimptoc.storageminer.util
 
 fun formatFileSize(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"

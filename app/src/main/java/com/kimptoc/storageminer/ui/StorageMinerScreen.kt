@@ -1,4 +1,4 @@
-package com.example.storageminer.ui
+package com.kimptoc.storageminer.ui
 
 import android.os.Environment
 import androidx.compose.foundation.layout.Arrangement
@@ -33,13 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.storageminer.model.ScanState
-import com.example.storageminer.model.StorageItem
-import com.example.storageminer.model.StorageScanResult
-import com.example.storageminer.ui.components.PieChart
-import com.example.storageminer.ui.components.ScanningIndicator
-import com.example.storageminer.util.formatFileSize
-import com.example.storageminer.viewmodel.StorageMinerViewModel
+import com.kimptoc.storageminer.model.ScanState
+import com.kimptoc.storageminer.model.StorageItem
+import com.kimptoc.storageminer.model.StorageScanResult
+import com.kimptoc.storageminer.ui.components.PieChart
+import com.kimptoc.storageminer.ui.components.ScanningIndicator
+import com.kimptoc.storageminer.util.formatFileSize
+import com.kimptoc.storageminer.viewmodel.StorageMinerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,6 +1,6 @@
-package com.example.storageminer.scanner
+package com.kimptoc.storageminer.scanner
 
-import com.example.storageminer.model.StorageItem
+import com.kimptoc.storageminer.model.StorageItem
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -1,4 +1,4 @@
-package com.example.storageminer
+package com.kimptoc.storageminer
 
 import org.junit.Test
 

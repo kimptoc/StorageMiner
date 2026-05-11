@@ -1,4 +1,4 @@
-package com.example.storageminer.viewmodel
+package com.kimptoc.storageminer.viewmodel
 
 import android.app.Application
 import android.app.AppOpsManager
@@ -12,10 +12,10 @@ import android.os.storage.StorageManager
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.storageminer.model.ScanState
-import com.example.storageminer.model.StorageItem
-import com.example.storageminer.model.StorageScanResult
-import com.example.storageminer.scanner.StorageScanner
+import com.kimptoc.storageminer.model.ScanState
+import com.kimptoc.storageminer.model.StorageItem
+import com.kimptoc.storageminer.model.StorageScanResult
+import com.kimptoc.storageminer.scanner.StorageScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

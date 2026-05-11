@@ -1,4 +1,4 @@
-package com.example.storageminer.ui.theme
+package com.kimptoc.storageminer.ui.theme
 
 import android.app.Activity
 import android.os.Build

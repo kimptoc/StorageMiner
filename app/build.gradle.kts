@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.storageminer"
+    namespace = "com.kimptoc.storageminer"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.storageminer"
+        applicationId = "com.kimptoc.storageminer"
         minSdk = 33
         targetSdk = 36
         versionCode = 1

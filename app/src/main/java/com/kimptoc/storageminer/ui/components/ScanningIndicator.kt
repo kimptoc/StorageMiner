@@ -1,4 +1,4 @@
-package com.example.storageminer.ui.components
+package com.kimptoc.storageminer.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.storageminer.util.formatFileSize
+import com.kimptoc.storageminer.util.formatFileSize
 
 @Composable
 fun ScanningIndicator(

@@ -1,4 +1,4 @@
-package com.example.storageminer
+package com.kimptoc.storageminer
 
 import android.app.AppOpsManager
 import android.content.Intent
@@ -17,9 +17,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.storageminer.ui.StorageMinerScreen
-import com.example.storageminer.ui.theme.StorageMinerTheme
-import com.example.storageminer.viewmodel.StorageMinerViewModel
+import com.kimptoc.storageminer.ui.StorageMinerScreen
+import com.kimptoc.storageminer.ui.theme.StorageMinerTheme
+import com.kimptoc.storageminer.viewmodel.StorageMinerViewModel
 
 class MainActivity : ComponentActivity() {
 
