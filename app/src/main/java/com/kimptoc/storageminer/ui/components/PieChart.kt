@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.kimptoc.storageminer.model.StorageItem
 import com.kimptoc.storageminer.ui.theme.PieColors
+import com.kimptoc.storageminer.util.formatFileCount
 import com.kimptoc.storageminer.util.formatFileSize
 
 @Composable
@@ -127,8 +128,13 @@ private fun LegendItem(
                 text = item.name,
                 style = MaterialTheme.typography.bodyMedium
             )
+            val countSuffix = if (item.fileCount != null && item.isDirectory) {
+                " · ${formatFileCount(item.fileCount)}"
+            } else {
+                ""
+            }
             Text(
-                text = "${formatFileSize(item.sizeBytes)} (%.1f%%)".format(percentage),
+                text = "${formatFileSize(item.sizeBytes)}$countSuffix (%.1f%%)".format(percentage),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
