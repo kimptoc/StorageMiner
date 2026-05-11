@@ -9,3 +9,6 @@ fun formatFileSize(bytes: Long): String {
     val gb = mb / 1024.0
     return "%.2f GB".format(gb)
 }
+
+fun formatFileCount(count: Int): String =
+    if (count == 1) "1 file" else "$count files"
