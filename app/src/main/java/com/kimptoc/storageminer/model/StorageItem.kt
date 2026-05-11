@@ -5,7 +5,7 @@ data class StorageItem(
     val sizeBytes: Long,
     val isDirectory: Boolean,
     val path: String,
-    val fileCount: Int? = null,
+    val fileCount: Int? = null
 )
 
 data class StorageScanResult(
