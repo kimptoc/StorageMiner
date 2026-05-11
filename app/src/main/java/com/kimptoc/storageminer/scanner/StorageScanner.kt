@@ -28,13 +28,14 @@ class StorageScanner {
             coroutineContext.ensureActive()
             if (entry.isDirectory) {
                 _currentFolder.value = entry.name
-                val size = calculateDirectorySize(entry)
+                val (size, count) = calculateDirectoryStats(entry)
                 items.add(
                     StorageItem(
                         name = entry.name,
                         sizeBytes = size,
                         isDirectory = true,
-                        path = entry.absolutePath
+                        path = entry.absolutePath,
+                        fileCount = count,
                     )
                 )
             } else {
@@ -45,7 +46,8 @@ class StorageScanner {
                         name = entry.name,
                         sizeBytes = size,
                         isDirectory = false,
-                        path = entry.absolutePath
+                        path = entry.absolutePath,
+                        fileCount = 1,
                     )
                 )
             }
@@ -54,22 +56,27 @@ class StorageScanner {
         return items.sortedByDescending { it.sizeBytes }
     }
 
-    private suspend fun calculateDirectorySize(dir: File): Long {
+    private suspend fun calculateDirectoryStats(dir: File): Pair<Long, Int> {
         var size = 0L
-        val files = dir.listFiles() ?: return 0L
+        var count = 0
+        val files = dir.listFiles() ?: return 0L to 0
         _foldersScanned.value++
 
         for (file in files) {
             coroutineContext.ensureActive()
-            size += if (file.isDirectory) {
+            if (file.isDirectory) {
                 _currentFolder.value = file.name
-                calculateDirectorySize(file)
+                val (childSize, childCount) = calculateDirectoryStats(file)
+                size += childSize
+                count += childCount
             } else {
                 val fileSize = file.length()
                 _bytesScanned.value += fileSize
-                fileSize
+                size += fileSize
+                count += 1
             }
         }
-        return size
+
+        return size to count
     }
 }
