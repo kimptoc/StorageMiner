@@ -96,6 +96,10 @@ Renders as: `1.2 GB · 234 files (5.3%)` for real folders, or unchanged `1.2 GB 
 
 `StorageMinerViewModel` constructs synthetic `StorageItem`s for Apps, Trash, System, "Other" grouped buckets, etc. Because `fileCount` defaults to `null`, none of those constructions need editing. They'll naturally fall through the UI guard and render the way they do today.
 
+Verified pre-implementation: a `git grep` for `StorageItem(` and `.copy(` across the codebase shows every call site uses the full constructor (with named or positional args, all four current fields). No `.copy(...)` invocations exist, so the new default-null field cannot accidentally land as a non-null value via a missed copy chain.
+
+Note on the UI guard `fileCount != null && isDirectory`: for the "Other" grouped bucket, the `isDirectory == false` half is what excludes it, since the synthetic item is built with `isDirectory = false, path = ""` and `fileCount` defaults to `null`. The guard is correct in both halves; this is just to flag that the `isDirectory` check is load-bearing, not redundant with the null check.
+
 ## Tests
 
 Both run as JVM unit tests under `app/src/test/java/com/kimptoc/storageminer/`. JUnit 4 is already configured.
@@ -108,14 +112,14 @@ Both run as JVM unit tests under `app/src/test/java/com/kimptoc/storageminer/`. 
 
 ### `StorageScannerTest`
 
-Build temporary directory trees with `kotlin.io.path.createTempDirectory()` (clean up in `@After`), then call `scanner.scan(tempRoot.absolutePath)` from `runBlocking`:
+Build temporary directory trees with `kotlin.io.path.createTempDirectory()` (clean up in `@After`), call `scanner.scan(tempRoot.absolutePath)` from `runBlocking`, and assert on the items it returns (look up by name with `items.find { it.name == "dir" }` rather than reaching for the private `calculateDirectoryStats`):
 
-| Test case | Tree | Expected for the top-level dir item |
+| Test case | Tree | Expected from `scan(root)` |
 |---|---|---|
-| Empty subdir | `root/empty/` | `sizeBytes=0, fileCount=0` |
-| One file | `root/dir/a.txt (10 B)` | `sizeBytes=10, fileCount=1` |
-| Nested files | `root/dir/a.txt (5B); root/dir/sub/b.txt (3B); root/dir/sub/c.txt (2B)` | `sizeBytes=10, fileCount=3` |
-| Top-level file | `root/loose.txt (7B)` | The legend item for `loose.txt` has `sizeBytes=7, fileCount=1, isDirectory=false` |
+| Empty subdir | `root/empty/` | `items.find { it.name == "empty" }` → `sizeBytes=0, fileCount=0, isDirectory=true` |
+| One file in subdir | `root/dir/a.txt (10 B)` | `items.find { it.name == "dir" }` → `sizeBytes=10, fileCount=1, isDirectory=true` |
+| Nested files | `root/dir/a.txt (5B); root/dir/sub/b.txt (3B); root/dir/sub/c.txt (2B)` | `items.find { it.name == "dir" }` → `sizeBytes=10, fileCount=3, isDirectory=true` |
+| Top-level file | `root/loose.txt (7B)` | `items.find { it.name == "loose.txt" }` → `sizeBytes=7, fileCount=1, isDirectory=false` |
 
 These also validate the existing size-summation behaviour, so they're not pure-new-feature tests — they pin down behaviour we currently lack any test coverage for.
 
